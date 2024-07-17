@@ -1,0 +1,93 @@
+version: '3.8'
+name: template01
+services:
+  api:
+    image: todo-mart-api
+    build:
+      context: ./todo
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./todo:/code  # Sync local development directory with the container
+    depends_on:
+        - postgres_db
+        - broker
+    ports:
+      - "8000:8000"  # Expose container port 8000 to host port 8000
+
+  api2:
+    image: ms2-mart-api
+    build:
+      context: ./microservice_02
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./microservice_02:/code  # Sync local development directory with the container
+    depends_on:
+        - broker
+    ports:
+      - "8002:8000"  # Expose container port 8000 to host port 8000
+
+  product-service:
+    image: todo-mart-api
+    build:
+      context: ./product-service
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./product-service:/code  # Sync local development directory with the container
+    depends_on:
+        - postgres_product_db
+        - broker
+    ports:
+      - "8005:8000"  # Expose container port 8000 to host port 8000
+
+  postgres_db:
+    image: postgres:latest  # Use the official PostgreSQL image
+    restart: always
+    container_name: PostgresCont
+    environment:
+        - POSTGRES_USER=ziakhan
+        - POSTGRES_PASSWORD=my_password
+        - POSTGRES_DB=mydatabase
+    ports:
+        - '5480:5432'
+    volumes:
+        - postgres_db:/var/lib/postgresql/data
+
+  postgres_product_db:
+    image: postgres:latest  # Use the official PostgreSQL image
+    restart: always
+    container_name: PostgresProductsCont
+    environment:
+        - POSTGRES_USER=ziakhan
+        - POSTGRES_PASSWORD=my_password
+        - POSTGRES_DB=mydatabase
+    ports:
+        - '5481:5432'
+    volumes:
+        - postgres_product_db:/var/lib/postgresql/data
+
+  broker:
+    image: confluentinc/cp-kafka:latest  # Use an appropriate Kafka broker image
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker:9092
+    ports:
+      - "9092:9092"
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest  # Use an appropriate Kafka UI image
+    environment:
+      KAFKA_CLUSTERS_0_NAME: default
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: broker:9092
+    ports:
+      - "8080:8080"
+
+volumes:
+  postgres_db:
+    driver: local
+  postgres_product_db:
+    driver: local
+
+networks:
+  default:
+    driver: bridge
